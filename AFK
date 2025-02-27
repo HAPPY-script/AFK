@@ -1,0 +1,37 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local RunService = game:GetService("RunService")
+
+local originalPosition = nil
+local isAFK = false
+local connection = nil
+
+local function lockPosition()
+    local lockedPosition = humanoidRootPart.Position
+    connection = RunService.Heartbeat:Connect(function()
+        humanoidRootPart.CFrame = CFrame.new(lockedPosition)
+    end)
+end
+
+local function unlockPosition()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+end
+
+player.Chatted:Connect(function(message)
+    if message == ";H_afk" and not isAFK then
+        isAFK = true
+        originalPosition = humanoidRootPart.Position
+        humanoidRootPart.CFrame = CFrame.new(originalPosition + Vector3.new(0, 50000, 0)) -- Teleport lên cao
+        task.wait(0.1) -- Chờ 0.1 giây để đảm bảo tp xong
+        lockPosition()
+    elseif message == ";H_unafk" and isAFK then
+        unlockPosition()
+        humanoidRootPart.CFrame = CFrame.new(originalPosition)
+        isAFK = false
+    end
+end)
