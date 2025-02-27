@@ -2,36 +2,36 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-local RunService = game:GetService("RunService")
-
-local originalPosition = nil
 local isAFK = false
-local connection = nil
+local lastPosition
 
 local function lockPosition()
-    local lockedPosition = humanoidRootPart.Position
-    connection = RunService.Heartbeat:Connect(function()
-        humanoidRootPart.CFrame = CFrame.new(lockedPosition)
-    end)
-end
-
-local function unlockPosition()
-    if connection then
-        connection:Disconnect()
-        connection = nil
+    while isAFK do
+        humanoidRootPart.CFrame = lastPosition
+        task.wait()
     end
 end
 
-player.Chatted:Connect(function(message)
-    if message == ";H_afk" and not isAFK then
+local function onCharacterAdded(newCharacter)
+    character = newCharacter
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    if isAFK then
+        humanoidRootPart.CFrame = lastPosition
+        task.spawn(lockPosition)
+    end
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+
+game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+    msg = msg:lower()
+    if msg == ";h_afk" and not isAFK then
+        lastPosition = humanoidRootPart.CFrame * CFrame.new(0, 50000, 0) -- Tp lên cao trước
+        humanoidRootPart.CFrame = lastPosition
         isAFK = true
-        originalPosition = humanoidRootPart.Position
-        humanoidRootPart.CFrame = CFrame.new(originalPosition + Vector3.new(0, 50000, 0)) -- Teleport lên cao
-        task.wait(0.1) -- Chờ 0.1 giây để đảm bảo tp xong
-        lockPosition()
-    elseif message == ";H_unafk" and isAFK then
-        unlockPosition()
-        humanoidRootPart.CFrame = CFrame.new(originalPosition)
+        task.spawn(lockPosition)
+    elseif msg == ";h_unafk" and isAFK then
+        humanoidRootPart.CFrame = lastPosition * CFrame.new(0, -50000, 0) -- Tp về vị trí cũ
         isAFK = false
     end
 end)
